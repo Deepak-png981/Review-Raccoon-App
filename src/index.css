@@ -1,0 +1,111 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 225 25% 10%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 25% 14%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 25% 12%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 265 89% 65%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 217 32% 17%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 32% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 217 32% 17%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62% 31%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 32% 18%;
+    --input: 217 32% 18%;
+    --ring: 212 26% 84%;
+
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-background;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-primary/50 rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary/80;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-md border border-white/10 shadow-md;
+  }
+  
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-500;
+  }
+  
+  .spotlight {
+    @apply pointer-events-none absolute inset-0 z-30 opacity-0;
+    background: radial-gradient(
+      600px circle at var(--x) var(--y),
+      rgba(139, 92, 246, 0.15),
+      transparent 40%
+    );
+  }
+
+  .heading-xl {
+    @apply font-display text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight;
+  }
+  
+  .heading-lg {
+    @apply font-display text-3xl md:text-4xl font-bold leading-tight;
+  }
+  
+  .heading-md {
+    @apply font-display text-2xl md:text-3xl font-bold leading-tight;
+  }
+  
+  .button-glow {
+    @apply relative overflow-hidden;
+  }
+  
+  .button-glow::after {
+    @apply absolute inset-0 content-[''] rounded-full opacity-0 transition-opacity duration-500;
+    box-shadow: 0 0 20px 5px theme('colors.primary.DEFAULT');
+  }
+  
+  .button-glow:hover::after {
+    @apply opacity-100;
+  }
+}
