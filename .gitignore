@@ -67,6 +67,7 @@ node_modules/
 .env.local
 
 .next/
+out/
 
 # Generated public files
 public/sitemap*.xml
@@ -93,3 +94,12 @@ __pycache__/
 
 
 ekline-app.code-workspace
+
+# Build
+build
+dist
+
+# Environment
+.env.development.local
+.env.test.local
+.env.production.local
