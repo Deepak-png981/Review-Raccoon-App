@@ -1,14 +1,8 @@
+/* eslint-disable react-refresh/only-export-components */
 import '../index.css';
-import { Metadata } from 'next';
+import { metadata, viewport } from './metadata';
 
-export const metadata: Metadata = {
-  title: 'Review Raccoon',
-  description: 'AI-powered code review assistant',
-  viewport: 'width=device-width, initial-scale=1',
-  icons: {
-    icon: '/favicon.ico',
-  },
-};
+export { metadata, viewport };
 
 export default function RootLayout({
   children,

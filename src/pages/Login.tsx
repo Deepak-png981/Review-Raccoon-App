@@ -1,6 +1,7 @@
+'use client'
 
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,7 +34,7 @@ const signupSchema = z.object({
 });
 
 const Login = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   
   // Login form
@@ -60,7 +61,6 @@ const Login = () => {
   const onLoginSubmit = (values: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
     
-    // Simulate login API call
     setTimeout(() => {
       setIsLoading(false);
       toast({
@@ -68,8 +68,7 @@ const Login = () => {
         description: "Redirecting to your dashboard...",
       });
       
-      // Redirect to dashboard after successful login
-      setTimeout(() => navigate('/dashboard'), 1500);
+      setTimeout(() => router.push('/dashboard'), 1500);
     }, 1500);
   };
 
@@ -77,7 +76,6 @@ const Login = () => {
   const onSignupSubmit = (values: z.infer<typeof signupSchema>) => {
     setIsLoading(true);
     
-    // Simulate signup API call
     setTimeout(() => {
       setIsLoading(false);
       toast({
@@ -85,8 +83,7 @@ const Login = () => {
         description: "Welcome to Review Raccoon! Redirecting to your dashboard...",
       });
       
-      // Redirect to dashboard after successful signup
-      setTimeout(() => navigate('/dashboard'), 1500);
+      setTimeout(() => router.push('/dashboard'), 1500);
     }, 1500);
   };
 
@@ -94,7 +91,6 @@ const Login = () => {
   const handleGoogleSignIn = () => {
     setIsLoading(true);
     
-    // Simulate Google sign-in
     setTimeout(() => {
       setIsLoading(false);
       toast({
@@ -102,8 +98,7 @@ const Login = () => {
         description: "Redirecting to your dashboard...",
       });
       
-      // Redirect to dashboard after successful sign-in
-      setTimeout(() => navigate('/dashboard'), 1500);
+      setTimeout(() => router.push('/dashboard'), 1500);
     }, 1500);
   };
 

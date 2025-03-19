@@ -1,7 +1,9 @@
+'use client'
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { LogOut, Search, Bell } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import {
   Sidebar,
   SidebarInset,
@@ -47,7 +49,7 @@ const AppSidebar = ({ activeItem, onItemClick }: { activeItem: string, onItemCli
 }
 
 const Dashboard = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [activeItem, setActiveItem] = useState<string>("dashboard");
   const [activeItemData, setActiveItemData] = useState<SidebarItem>({
     title: "Dashboard",
@@ -56,7 +58,7 @@ const Dashboard = () => {
   });
   
   const handleLogout = () => {
-    navigate('/');
+    router.push('/');
   };
 
   const handleItemClick = (item: SidebarItem) => {

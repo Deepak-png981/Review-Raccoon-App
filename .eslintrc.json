@@ -5,7 +5,8 @@
     "plugin:@typescript-eslint/recommended"
   ],
   "rules": {
-    "react-refresh/only-export-components": "off",
-    "@typescript-eslint/no-empty-object-type": "off"
-  }
+    "react-refresh/only-export-components": "off"
+  },
+  "plugins": ["@typescript-eslint"],
+  "parser": "@typescript-eslint/parser"
 } 
