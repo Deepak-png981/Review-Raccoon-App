@@ -66,8 +66,12 @@ node_modules/
 .env
 .env.local
 
+# Next.js build output
 .next/
+# Next.js build output
 out/
+# Local development build
+build/
 
 # Generated public files
 public/sitemap*.xml
