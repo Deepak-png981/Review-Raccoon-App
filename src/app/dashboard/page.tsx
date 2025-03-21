@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { LogOut, Search, Bell } from 'lucide-react';
+import { signOut, useSession } from 'next-auth/react';
 import {
   Sidebar,
   SidebarInset,
@@ -12,8 +13,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-
-// Import our dashboard components
+import Image from 'next/image';
 import AppSidebarContent, { SidebarItem } from '@/components/dashboard/SidebarContent';
 import DashboardContent from '@/components/dashboard/DashboardContent';
 import RepositoriesContent from '@/components/dashboard/RepositoriesContent';
@@ -23,6 +23,7 @@ import PlaceholderContent from '@/components/dashboard/PlaceholderContent';
 
 export default function Dashboard() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [activeItem, setActiveItem] = useState<string>("dashboard");
   const [activeItemData, setActiveItemData] = useState<SidebarItem>({
     title: "Dashboard",
@@ -30,14 +31,31 @@ export default function Dashboard() {
     id: "dashboard"
   });
   
-  const handleLogout = () => {
-    router.push('/');
+  React.useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
+
+  const handleLogout = async () => {
+    try {
+      await signOut({ 
+        redirect: true,
+        callbackUrl: '/'
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const handleItemClick = (item: SidebarItem) => {
     setActiveItem(item.id);
     setActiveItemData(item);
   };
+
+  if (status === 'unauthenticated') {
+    return null;
+  }
 
   const renderContent = () => {
     switch(activeItem) {
@@ -89,7 +107,8 @@ export default function Dashboard() {
               </div>
               
               <div className="flex items-center gap-4">
-                <Search className="text-muted-foreground" size={18} />
+                <Image src={session?.user?.image || "/images/default-avatar.png"} alt="User Avatar" width={30} height={30} className="rounded-full" />
+                {/* <Search className="text-muted-foreground" size={18} /> */}
                 <Bell className="text-muted-foreground" size={18} />
                 <Button variant="ghost" size="sm" onClick={handleLogout} className="flex items-center gap-2">
                   <LogOut size={16} />
