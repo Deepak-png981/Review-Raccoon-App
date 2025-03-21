@@ -85,7 +85,7 @@ const HowItWorks = () => {
                             <Button size="sm" className="ml-auto">Install</Button>
                           </a>
                         </div>
-                        <div className="h-36 bg-card/50 rounded-lg"></div>
+                        {/* <div className="h-36 bg-card/50 rounded-lg"></div> */}
                       </div>
                     </div>
                   )}
