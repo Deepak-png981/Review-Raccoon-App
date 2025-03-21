@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Check, Package } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -159,7 +158,12 @@ const Pricing = () => {
         
         <div className="mt-16 text-center">
           <p className="text-foreground/70 mb-2">Need a custom plan?</p>
-          <Button variant="outline">Contact our Sales Team</Button>
+          <Button 
+            variant="outline"
+            onClick={() => window.location.href = 'mailto:deepakashujoshi@gmail.com?subject=Review%20Raccoon%20Enterprise%20Inquiry'}
+          >
+            Contact our Sales Team
+          </Button>
         </div>
       </div>
     </section>

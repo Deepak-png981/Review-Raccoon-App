@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { HelpCircle } from 'lucide-react';
+import Link from 'next/link';
 import {
   Accordion,
   AccordionContent,
@@ -49,9 +50,12 @@ const FAQ = () => {
           <p className="mb-4 text-foreground/80">
             Still have questions?
           </p>
-          <a href="/documentation" className="text-primary hover:text-primary/80 font-medium">
+          <Link 
+            href="/documentation" 
+            className="text-primary hover:text-primary/80 font-medium"
+          >
             Check out our detailed documentation →
-          </a>
+          </Link>
         </div>
       </div>
     </section>

@@ -82,7 +82,7 @@ const Hero = () => {
               <div className="glass-card p-8 rounded-xl max-w-2xl w-full text-left">
                 <div className="flex items-start gap-4 mb-6">
                   <div className="w-10 h-10 rounded-full bg-primary/30 flex items-center justify-center flex-shrink-0">
-                    <img src="/raccoon-logo.svg" alt="Raccoon" className="w-6 h-6" />
+                    <img src="/raccoon-logo.svg" alt="Raccoon" className="w-10 h-10" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-lg mb-1">Review Raccoon Analysis Complete</h3>

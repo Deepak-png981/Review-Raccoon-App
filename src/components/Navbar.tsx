@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Menu, X, Github, LogIn } from 'lucide-react';
 import Image from 'next/image';
+import { REVIEW_RACCOON_GITHUB_MARKETPLACE_URL } from '@/constants';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -46,6 +47,11 @@ const Navbar = () => {
     router.push('/login');
   };
 
+  const handleGitHubClick = () => {
+    window.open(REVIEW_RACCOON_GITHUB_MARKETPLACE_URL, '_blank');
+    setIsMobileMenuOpen(false);
+  };
+
   return (
     <header 
       className={`fixed top-0 left-0 right-0 z-50 px-6 md:px-8 transition-all duration-300 ${
@@ -55,7 +61,7 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 animate-fade-in">
           <Image 
-            src="/ReviewRaccoon.png"
+            src="/raccoon-logo.svg"
             alt="Review Raccoon Logo"
             width={120}
             height={20}
@@ -111,7 +117,7 @@ const Navbar = () => {
           </ul>
           
           <div className="flex items-center gap-4">
-            <Button variant="outline" className="flex items-center gap-2">
+            <Button variant="outline" className="flex items-center gap-2" onClick={handleGitHubClick}>
               <Github size={18} />
               <span>GitHub</span>
             </Button>
@@ -179,7 +185,11 @@ const Navbar = () => {
             </ul>
             
             <div className="flex flex-col gap-3">
-              <Button variant="outline" className="flex items-center justify-center gap-2 w-full">
+              <Button 
+                variant="outline" 
+                className="flex items-center justify-center gap-2 w-full" 
+                onClick={handleGitHubClick}
+              >
                 <Github size={18} />
                 <span>GitHub</span>
               </Button>

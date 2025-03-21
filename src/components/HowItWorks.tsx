@@ -1,7 +1,8 @@
-
 import React from 'react';
 import { GitPullRequest, Github, CheckCircle2, Workflow } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { REVIEW_RACCOON_GITHUB_MARKETPLACE_URL, REVIEW_RACCOON_WORKFLOW_CONFIG } from '@/constants';
+import { useRouter } from 'next/navigation';
 
 const steps = [
   {
@@ -27,6 +28,8 @@ const steps = [
 ];
 
 const HowItWorks = () => {
+  const router = useRouter();
+
   return (
     <section id="how-it-works" className="py-20 md:py-32">
       <div className="max-w-7xl mx-auto px-6 md:px-8">
@@ -78,7 +81,9 @@ const HowItWorks = () => {
                             <h4 className="font-semibold">Review Raccoon</h4>
                             <p className="text-sm text-foreground/70">Automated code review assistant</p>
                           </div>
-                          <Button size="sm" className="ml-auto">Install</Button>
+                          <a href={REVIEW_RACCOON_GITHUB_MARKETPLACE_URL} target="_blank" rel="noopener noreferrer">
+                            <Button size="sm" className="ml-auto">Install</Button>
+                          </a>
                         </div>
                         <div className="h-36 bg-card/50 rounded-lg"></div>
                       </div>
@@ -92,22 +97,7 @@ const HowItWorks = () => {
                       </div>
                       <div className="p-6 bg-black/30">
                         <pre className="text-sm overflow-x-auto">
-                          <code className="text-foreground/90">{`name: Review Raccoon
-
-on:
-  pull_request:
-    types: [opened, synchronize]
-
-jobs:
-  review:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Review Raccoon Action
-        uses: review-raccoon/action@v1
-        with:
-          github-token: \${{ secrets.GITHUB_TOKEN }}
-          config-path: '.reviewraccoon.json'`}</code>
+                          <code className="text-foreground/90">{REVIEW_RACCOON_WORKFLOW_CONFIG}</code>
                         </pre>
                       </div>
                     </div>
@@ -123,7 +113,7 @@ jobs:
                         <div className="flex items-center gap-3 mb-4">
                           <div className="w-8 h-8 rounded-full bg-primary/20"></div>
                           <div>
-                            <p className="text-sm font-medium">johndoe added 3 commits</p>
+                            <p className="text-sm font-medium">Deepak Joshi added 3 commits</p>
                             <p className="text-xs text-foreground/60">2 hours ago</p>
                           </div>
                         </div>
@@ -158,7 +148,7 @@ jobs:
                                 <span className="text-sm font-medium">Potential memory leak</span>
                                 <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">Critical</span>
                               </div>
-                              <p className="text-xs text-foreground/70 mb-2">Unsubscribed event listener in React component 'Dashboard.jsx:56'</p>
+                              <p className="text-xs text-foreground/70 mb-2">MAJOR: Unsubscribed event listener in React component 'Dashboard.jsx:56'</p>
                               <div className="text-xs bg-black/30 p-2 rounded font-mono">
                                 useEffect(() =&gt; &#123;<br/>
                                 &nbsp;&nbsp;window.addEventListener('resize', handleResize);<br/>
@@ -181,7 +171,11 @@ jobs:
         </div>
         
         <div className="mt-16 md:mt-24 text-center">
-          <Button size="lg" className="button-glow">
+          <Button 
+            size="lg" 
+            className="button-glow"
+            onClick={() => router.push('/login')}
+          >
             Get Started with Review Raccoon
           </Button>
         </div>
