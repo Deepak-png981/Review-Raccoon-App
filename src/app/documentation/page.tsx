@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Button } from "@/components/ui/button";
 import { Code, GitBranch, Github, Terminal } from 'lucide-react';
+import { REVIEW_RACCOON_WORKFLOW_CONFIG } from '@/constants';
 
 const Documentation = () => {
   return (
@@ -68,22 +69,7 @@ const Documentation = () => {
                     </Button>
                   </div>
                   <pre className="overflow-x-auto text-sm">
-                    <code>{`name: Review Raccoon
-
-on:
-  pull_request:
-    types: [opened, synchronize]
-
-jobs:
-  review:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Review Raccoon Action
-        uses: review-raccoon/action@v1
-        with:
-          github-token: \${{ secrets.GITHUB_TOKEN }}
-          config-path: '.reviewraccoon.json'`}</code>
+                    <code>{REVIEW_RACCOON_WORKFLOW_CONFIG}</code>
                   </pre>
                 </div>
               </div>
