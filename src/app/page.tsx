@@ -1,10 +1,14 @@
+import { Suspense } from 'react';
 import ClientProviders from '@/components/ClientProviders';
 import HomePage from '@/components/HomePage';
+import Loading from '@/components/Loading';
 
 export default function Home() {
   return (
     <ClientProviders>
-      <HomePage />
+      <Suspense fallback={<Loading />}>
+        <HomePage />
+      </Suspense>
     </ClientProviders>
   );
 }

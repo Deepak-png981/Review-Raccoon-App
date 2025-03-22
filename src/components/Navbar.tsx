@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
-import { Menu, X, Github, LogIn, LayoutDashboard } from 'lucide-react';
+import { Menu, X, Github, LogIn, LayoutDashboard, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { REVIEW_RACCOON_GITHUB_MARKETPLACE_URL } from '@/constants';
 import { useSession } from 'next-auth/react';
@@ -36,7 +36,6 @@ const Navbar = () => {
         element.scrollIntoView({ behavior: 'smooth' });
       }
     } else {
-      // If we're not on the homepage, navigate to homepage and then scroll
       router.push(`/#${sectionId}`);
     }
   };
@@ -57,7 +56,16 @@ const Navbar = () => {
   };
 
   const renderAuthButton = () => {
-    if (status === 'authenticated') {
+    if (status === 'loading') {
+      return (
+        <Button disabled className="button-glow flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Loading...</span>
+        </Button>
+      );
+    }
+
+    if (status === 'authenticated' && session) {
       return (
         <Button className="button-glow flex items-center gap-2" onClick={handleDashboardClick}>
           <LayoutDashboard size={18} />
