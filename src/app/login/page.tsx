@@ -5,21 +5,72 @@ import NextNavbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Github, Mail } from 'lucide-react';
+import { Github } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { signIn, useSession } from 'next-auth/react';
+import { toast } from "@/components/ui/use-toast";
 
 export default function Login() {
   const [activeTab, setActiveTab] = useState("login");
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { status } = useSession();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Redirect if already authenticated
+  React.useEffect(() => {
+    if (status === 'authenticated') {
+      router.push('/dashboard');
+    }
+  }, [status, router]);
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsLoading(true);
+      const result = await signIn('google', {
+        callbackUrl: '/dashboard',
+        redirect: true,
+      });
+      
+      if (result?.error) {
+        toast({
+          title: "Error",
+          description: "Failed to sign in with Google",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Google sign-in error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to sign in with Google",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate successful login/signup
-    router.push('/dashboard');
+    setIsLoading(true);
+    
+    try {
+      // Handle form submission logic here
+      router.push('/dashboard');
+    } catch (error) {
+      console.error('Form submission error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to sign in",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -106,14 +157,20 @@ export default function Login() {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <Button variant="outline" className="w-full">
-                    <Github className="mr-2 h-4 w-4" />
-                    GitHub
-                  </Button>
-                  <Button variant="outline" className="w-full">
-                    <Mail className="mr-2 h-4 w-4" />
-                    Google
+                <div className="w-full">
+                  <Button 
+                    variant="outline" 
+                    className="w-full flex items-center justify-center gap-2 bg-white  text-black border border-gray-300"
+                    onClick={handleGoogleSignIn}
+                    disabled={isLoading}
+                    type="button"
+                  >
+                    <img 
+                      src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
+                      alt="Google logo" 
+                      className="w-5 h-5"
+                    />
+                    Sign in with Google
                   </Button>
                 </div>
               </CardContent>

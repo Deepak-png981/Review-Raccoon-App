@@ -42,8 +42,7 @@ const Hero = () => {
       <div className="max-w-7xl mx-auto px-6 md:px-8 relative z-10">
         <div className="flex flex-col items-center text-center mb-12 md:mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6 animate-fade-in">
-            <Star size={16} className="text-primary" />
-            <span className="text-sm font-medium">Streamline your GitHub code reviews</span>
+            <span className="text-sm font-medium">✨ Streamline your GitHub code reviews</span>
           </div>
           
           <h1 className="heading-xl mb-6 animate-fade-in" style={{ animationDelay: '100ms' }}>

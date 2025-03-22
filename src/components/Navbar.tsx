@@ -4,15 +4,17 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
-import { Menu, X, Github, LogIn } from 'lucide-react';
+import { Menu, X, Github, LogIn, LayoutDashboard, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { REVIEW_RACCOON_GITHUB_MARKETPLACE_URL } from '@/constants';
+import { useSession } from 'next-auth/react';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const { data: session, status } = useSession();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -25,31 +27,59 @@ const Navbar = () => {
     };
   }, []);
 
-  // Function to handle smooth scrolling to sections on the home page
   const scrollToSection = (sectionId: string) => {
     setIsMobileMenuOpen(false);
     
-    // Only attempt to scroll if we're on the homepage
     if (pathname === '/') {
       const element = document.getElementById(sectionId);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
       }
     } else {
-      // If we're not on the homepage, navigate to homepage and then scroll
       router.push(`/#${sectionId}`);
     }
   };
 
-  // Handle login button click
   const handleLoginClick = () => {
     setIsMobileMenuOpen(false);
     router.push('/login');
   };
 
+  const handleDashboardClick = () => {
+    setIsMobileMenuOpen(false);
+    router.push('/dashboard');
+  };
+
   const handleGitHubClick = () => {
     window.open(REVIEW_RACCOON_GITHUB_MARKETPLACE_URL, '_blank');
     setIsMobileMenuOpen(false);
+  };
+
+  const renderAuthButton = () => {
+    if (status === 'loading') {
+      return (
+        <Button disabled className="button-glow flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Loading...</span>
+        </Button>
+      );
+    }
+
+    if (status === 'authenticated' && session) {
+      return (
+        <Button className="button-glow flex items-center gap-2" onClick={handleDashboardClick}>
+          <LayoutDashboard size={18} />
+          <span>Dashboard</span>
+        </Button>
+      );
+    }
+
+    return (
+      <Button className="button-glow flex items-center gap-2" onClick={handleLoginClick}>
+        <LogIn size={18} />
+        <span>Login / Signup</span>
+      </Button>
+    );
   };
 
   return (
@@ -65,7 +95,7 @@ const Navbar = () => {
             alt="Review Raccoon Logo"
             width={120}
             height={20}
-            className="w-[12px] h-auto sm:w-[100px]"
+            className="w-[12px] h-auto sm:w-[60px]"
             priority
           />
           <span className="font-display font-bold text-xl">Review Raccoon</span>
@@ -121,10 +151,7 @@ const Navbar = () => {
               <Github size={18} />
               <span>GitHub</span>
             </Button>
-            <Button className="button-glow flex items-center gap-2" onClick={handleLoginClick}>
-              <LogIn size={18} />
-              <span>Login / Signup</span>
-            </Button>
+            {renderAuthButton()}
           </div>
         </nav>
         
@@ -193,10 +220,7 @@ const Navbar = () => {
                 <Github size={18} />
                 <span>GitHub</span>
               </Button>
-              <Button className="w-full button-glow flex items-center justify-center gap-2" onClick={handleLoginClick}>
-                <LogIn size={18} />
-                <span>Login / Signup</span>
-              </Button>
+              {renderAuthButton()}
             </div>
           </nav>
         </div>

@@ -1,15 +1,17 @@
-
+"use client"
 import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { GitBranch, CheckCircle, AlertCircle, Clock } from 'lucide-react';
-
+import { useSession } from 'next-auth/react';
 const DashboardContent: React.FC = () => {
+  const { data: session } = useSession();
+  const userName = session?.user?.name ? session.user.name.split(' ')[0] : 'Developer';
   return (
     <>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Welcome back, Developer!</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Welcome back, {userName}!</h1>
           <p className="text-muted-foreground mt-1">Here's what's happening with your repositories today.</p>
         </div>
         <Button className="button-glow flex items-center gap-2">
