@@ -8,10 +8,7 @@ import {
   Bell, 
   Settings, 
   LayoutDashboard,
-  Inbox,
-  BarChart3,
-  Star,
-  GitPullRequestDraft
+  BrainCircuit
 } from 'lucide-react';
 import {
   SidebarContent,
@@ -45,6 +42,11 @@ const mainItems: SidebarItem[] = [
     title: "Pull Requests",
     icon: GitPullRequest,
     id: "pull-requests"
+  },
+  {
+    title: "Knowledge Base",
+    icon: BrainCircuit,
+    id: "knowledge-base"
   },
   {
     title: "Code Reviews",
