@@ -121,7 +121,7 @@ const AppSidebarContent: React.FC<AppSidebarContentProps> = ({
       <SidebarSeparator />
       
       <SidebarGroup>
-        <SidebarGroupLabel>Recent Repositories</SidebarGroupLabel>
+        {/* <SidebarGroupLabel>Recent Repositories</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
             {recentRepositories.map((item) => (
@@ -136,7 +136,7 @@ const AppSidebarContent: React.FC<AppSidebarContentProps> = ({
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
-        </SidebarGroupContent>
+        </SidebarGroupContent> */}
       </SidebarGroup>
     </SidebarContent>
   );
