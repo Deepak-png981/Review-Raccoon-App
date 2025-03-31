@@ -3,10 +3,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Link as LinkIcon, FileText, Tag, BookOpen, Lightbulb, Code } from 'lucide-react';
-import { KnowledgeBaseItem } from '@/types';
+import { Search, Plus, FileText, Tag, BookOpen, Lightbulb, Code, Pencil, Trash2 } from 'lucide-react';
+import { KnowledgeBaseItem, KnowledgeBaseFormData } from '@/types';
 import AddEntryModal from './AddEntryModal';
-import { useToast } from '@/components/ui/use-toast';
+
+import { useKnowledgeBase } from '@/hooks/useKnowledgeBase';
 
 const INITIAL_ITEMS: KnowledgeBaseItem[] = [
   // {
@@ -33,31 +34,41 @@ const INITIAL_ITEMS: KnowledgeBaseItem[] = [
 ];
 
 const KnowledgeBaseContent: React.FC = () => {
-  const [items, setItems] = useState<KnowledgeBaseItem[]>(INITIAL_ITEMS);
+  const { entries, isLoading, error, addEntry, updateKnowledgeBase, removeEntry } = useKnowledgeBase();
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { toast } = useToast();
+  const [selectedEntry, setSelectedEntry] = useState<KnowledgeBaseItem | null>(null);
 
   const filteredItems = useMemo(() => {
+    if (!entries) return [];
     const query = searchQuery.toLowerCase();
-    return items.filter(item => 
+    return entries.filter(item => 
       item.title.toLowerCase().includes(query) ||
       item.description.toLowerCase().includes(query) ||
       item.tags.some(tag => tag.toLowerCase().includes(query))
     );
-  }, [items, searchQuery]);
+  }, [entries, searchQuery]);
 
-  const handleAddEntry = (newEntry: Omit<KnowledgeBaseItem, 'id'>) => {
-    const entry: KnowledgeBaseItem = {
-      ...newEntry,
-      id: Date.now().toString()
-    };
-    setItems(prev => [...prev, entry]);
+  const handleAddEntry = (newEntry: KnowledgeBaseFormData) => {
+    addEntry(newEntry);
     setIsModalOpen(false);
-    toast({
-      title: "Entry Added",
-      description: "New knowledge base entry has been added successfully.",
-    });
+    setSelectedEntry(null);
+  };
+
+  const handleUpdateEntry = (updatedEntry: KnowledgeBaseFormData) => {
+    if (selectedEntry?._id) {
+      updateKnowledgeBase({ 
+        id: selectedEntry._id, 
+        data: updatedEntry 
+      });
+      setIsModalOpen(false);
+      setSelectedEntry(null);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedEntry(null);
   };
 
   const renderSection = (type: KnowledgeBaseItem['type'], title: string, icon: React.ReactNode) => {
@@ -75,8 +86,8 @@ const KnowledgeBaseContent: React.FC = () => {
           <CardContent className="divide-y p-0">
             {sectionItems.map((item) => (
               <div 
-                key={item.id} 
-                className="p-4 hover:bg-accent/5 transition-colors rounded-lg"
+                key={item._id}
+                className="p-4 hover:bg-accent/5 transition-colors rounded-lg relative"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
@@ -87,7 +98,7 @@ const KnowledgeBaseContent: React.FC = () => {
                     <div className="flex flex-wrap gap-2">
                       {item.tags.map(tag => (
                         <Badge 
-                          key={tag} 
+                          key={`${item._id}-${tag}`}
                           variant="secondary" 
                           className="text-xs hover:bg-primary/20 cursor-pointer transition-colors"
                         >
@@ -95,6 +106,33 @@ const KnowledgeBaseContent: React.FC = () => {
                         </Badge>
                       ))}
                     </div>
+                  </div>
+                  
+                  {/* Always Visible Actions Menu */}
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                      onClick={() => {
+                        setSelectedEntry(item);
+                        setIsModalOpen(true);
+                      }}
+                    >
+                      <Pencil size={16} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      onClick={() => {
+                        if (window.confirm('Are you sure you want to delete this entry?')) {
+                          removeEntry(item._id);
+                        }
+                      }}
+                    >
+                      <Trash2 size={16} />
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -160,7 +198,7 @@ const KnowledgeBaseContent: React.FC = () => {
           <h1 className="text-3xl font-bold tracking-tight">Knowledge Base</h1>
           <p className="text-muted-foreground mt-1">Centralized repository for coding guidelines and documentation</p>
         </div>
-        {items.length > 0 && (
+        {entries && entries.length > 0 && (
           <Button 
             className="button-glow flex items-center gap-2" 
             onClick={() => setIsModalOpen(true)}
@@ -171,7 +209,7 @@ const KnowledgeBaseContent: React.FC = () => {
         )}
       </div>
 
-      {items.length > 0 ? (
+      {entries && entries.length > 0 ? (
         <>
           <div className="mb-8">
             <div className="relative">
@@ -203,8 +241,9 @@ const KnowledgeBaseContent: React.FC = () => {
 
       <AddEntryModal 
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleAddEntry}
+        onClose={handleCloseModal}
+        onSubmit={selectedEntry ? handleUpdateEntry : handleAddEntry}
+        initialData={selectedEntry}
       />
     </div>
   );

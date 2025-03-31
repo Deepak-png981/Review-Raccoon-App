@@ -1,68 +1,62 @@
-import NextAuth, { NextAuthOptions, Session as NextAuthSession, User } from "next-auth"
-import GoogleProvider from "next-auth/providers/google"
-import { JWT as NextAuthJWT } from "next-auth/jwt"
-import { Account } from "next-auth"
-interface Session extends NextAuthSession {
-  accessToken?: string;
-}
-interface JWT extends NextAuthJWT {
-  accessToken?: string;
-}
+import NextAuth, { NextAuthOptions } from "next-auth";
+import GoogleProvider from "next-auth/providers/google";
+import { User } from "@/models/User";
+import { connectDB } from "@/db/db";
 
-const authOptions: NextAuthOptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
   ],
-  pages: {
-    signIn: '/login',
-  },
   callbacks: {
-    async signIn({ user, account }: { user: User; account: Account | null }) {
-      if (account?.provider === "google") {
-        try {
-          const response = await fetch(`${process.env.NEXTAUTH_URL}/api/user`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              email: user.email,
-              name: user.name,
-              googleId: user.id
-            }),
-          });
-
-          if (response.ok) {
-            return true;
-          }
-          console.error("Failed to create user:", await response.text());
-          return false;
-        } catch (error) {
-          console.error("Error occurred while creating user:", error);
-          return false;
-        }
-      }
-      return true;
-    },
-    async session({ session, token }: { session: Session; token: JWT }) {
-      if (token.accessToken) {
-        session.accessToken = token.accessToken;
-      }
-      return session;
-    },
-    async jwt({ token, user, account }: { token: JWT; user?: User; account?: Account | null }) {
-      if (account && user) {
-        token.accessToken = account.access_token;
+    async jwt({ token, user, account }) {
+      if (user) {
+        token.id = user.id;
+        token.organizationId = user.organizationId;
       }
       return token;
     },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+        session.user.organizationId = token.organizationId as string;
+      }
+      return session;
+    },
+    async signIn({ user, account, profile }) {
+      try {
+        await connectDB();
+
+        const  dbUser = await User.findOne({ email: user.email });
+        
+        if (!dbUser) {
+          const newDbUser = await User.create({
+            email: user.email,
+            name: user.name,
+            googleId: profile?.sub || "",
+            userId: user.id,
+          });
+          user.id = newDbUser.userId;
+        } else {
+          user.id = dbUser.userId;
+        }
+        
+        return true;
+      } catch (error) {
+        console.error("Error in signIn callback:", error);
+        return false;
+      }
+    },
   },
-  secret: process.env.NEXTAUTH_SECRET,
-}
+  pages: {
+    signIn: '/login',
+  },
+  session: {
+    strategy: 'jwt',
+  },
+};
 
-const handler = NextAuth(authOptions)
-
-export { handler as GET, handler as POST }
+const handler = NextAuth(authOptions);
+export { handler as GET, handler as POST };

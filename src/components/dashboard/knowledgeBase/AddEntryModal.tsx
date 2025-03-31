@@ -5,21 +5,40 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { KnowledgeBaseItem } from '@/types';
+import { KnowledgeBaseItem, KnowledgeBaseFormData } from '@/types';
 
 interface AddEntryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (entry: Omit<KnowledgeBaseItem, 'id'>) => void;
+  onSubmit: (entry: KnowledgeBaseFormData) => void;
+  initialData?: KnowledgeBaseItem | null;
 }
 
-const AddEntryModal: React.FC<AddEntryModalProps> = ({ isOpen, onClose, onSubmit }) => {
+const AddEntryModal: React.FC<AddEntryModalProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
   const [formData, setFormData] = React.useState({
     title: '',
     description: '',
     tags: '',
     type: 'coding' as KnowledgeBaseItem['type']
   });
+
+  React.useEffect(() => {
+    if (initialData) {
+      setFormData({
+        title: initialData.title,
+        description: initialData.description,
+        tags: initialData.tags.join(', '),
+        type: initialData.type
+      });
+    } else {
+      setFormData({
+        title: '',
+        description: '',
+        tags: '',
+        type: 'coding'
+      });
+    }
+  }, [initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +55,9 @@ const AddEntryModal: React.FC<AddEntryModalProps> = ({ isOpen, onClose, onSubmit
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
-          <DialogTitle>Add New Knowledge Base Entry</DialogTitle>
+          <DialogTitle>
+            {initialData ? 'Edit Knowledge Base Entry' : 'Add New Knowledge Base Entry'}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
