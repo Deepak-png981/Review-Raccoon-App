@@ -1,7 +1,5 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import { User } from "@/models/User";
-import { connectDB } from "@/db/db";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -27,21 +25,24 @@ export const authOptions: NextAuthOptions = {
     },
     async signIn({ user, account, profile }) {
       try {
-        await connectDB();
-
-        const  dbUser = await User.findOne({ email: user.email });
-        
-        if (!dbUser) {
-          const newDbUser = await User.create({
+        const response = await fetch(`${process.env.NEXTAUTH_URL}/api/user`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
             email: user.email,
             name: user.name,
             googleId: profile?.sub || "",
-            userId: user.id,
-          });
-          user.id = newDbUser.userId;
-        } else {
-          user.id = dbUser.userId;
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create/fetch user');
         }
+
+        const data = await response.json();
+        user.id = data.user.userId;
         
         return true;
       } catch (error) {
