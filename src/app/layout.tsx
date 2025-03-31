@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import '../index.css';
 import { metadata, viewport } from './metadata';
-import NextAuthProvider from './Providers';
+import ClientProviders from '@/components/ClientProviders';
 
 export { metadata, viewport };
 
@@ -12,11 +12,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <NextAuthProvider>
-        <body className="min-h-screen">
+      <body>
+        <ClientProviders>
           {children}
-        </body>
-      </NextAuthProvider>
+        </ClientProviders>
+      </body>
     </html>
-  )
+  );
 }
