@@ -1,12 +1,16 @@
 "use client"
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { GitBranch, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { useSession } from 'next-auth/react';
+import ConnectRepoModal from './ConnectRepoModal';
+
 const DashboardContent: React.FC = () => {
   const { data: session } = useSession();
+  const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
   const userName = session?.user?.name ? session.user.name.split(' ')[0] : 'Developer';
+
   return (
     <>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -14,11 +18,19 @@ const DashboardContent: React.FC = () => {
           <h1 className="text-3xl font-bold tracking-tight">Welcome back, {userName}!</h1>
           <p className="text-muted-foreground mt-1">Here's what's happening with your repositories today.</p>
         </div>
-        <Button className="button-glow flex items-center gap-2">
+        <Button 
+          className="button-glow flex items-center gap-2"
+          onClick={() => setIsConnectModalOpen(true)}
+        >
           <GitBranch size={16} />
           Connect Repository
         </Button>
       </div>
+
+      <ConnectRepoModal 
+        isOpen={isConnectModalOpen}
+        onClose={() => setIsConnectModalOpen(false)}
+      />
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
         <Card>

@@ -1,0 +1,265 @@
+import { User, IUser } from '@/models/User';
+import crypto from 'crypto';
+import { connectDB } from '@/lib/mongodb';
+
+/**
+ * Hash a GitHub token for secure storage
+ */
+function hashToken(token: string): string {
+  const hash = crypto.createHash('sha256');
+  hash.update(token);
+  return hash.digest('hex');
+}
+
+/**
+ * Find user by any identifier (userId, email, googleId, or GitHub userId)
+ */
+export async function findUserByAnyId(identifiers: {
+  userId?: string;
+  email?: string;
+  googleId?: string;
+  githubId?: string;
+}): Promise<IUser | null> {
+  await connectDB();
+  
+  const { userId, email, googleId, githubId } = identifiers;
+  
+  // Try to find the user by any of the provided identifiers
+  const query: any = {};
+  
+  if (userId) {
+    query.userId = userId;
+  }
+  else if (email) {
+    // Check both primary email and additional emails
+    query.$or = [
+      { email },
+      { additionalEmails: email }
+    ];
+  }
+  else if (googleId) {
+    query.googleId = googleId;
+  }
+  else if (githubId) {
+    query['githubIntegration.userId'] = githubId;
+  }
+  
+  // No identifiers provided
+  if (Object.keys(query).length === 0) {
+    return null;
+  }
+  
+  return await User.findOne(query);
+}
+
+/**
+ * Connect GitHub account to an existing user by session userId
+ * This supports different emails between Google and GitHub
+ */
+export async function connectGithubToUser(userId: string, token: string, profile: any) {
+  await connectDB();
+  
+  // Check if a user with this GitHub ID already exists
+  const existingGithubUser = await User.findOne({ 'githubIntegration.userId': profile.id });
+  
+  if (existingGithubUser && existingGithubUser.userId !== userId) {
+    throw new Error('This GitHub account is already connected to another user');
+  }
+  
+  // Hash the token for secure storage
+  const hashedToken = hashToken(token);
+  
+  // Find user by userId (from session)
+  const user = await User.findOne({ userId });
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  // Save the GitHub email if it differs from the primary email
+  if (profile.email && profile.email !== user.email) {
+    // Add to additional emails if not already there
+    const additionalEmails = user.additionalEmails || [];
+    if (!additionalEmails.includes(profile.email)) {
+      additionalEmails.push(profile.email);
+      user.additionalEmails = additionalEmails;
+    }
+  }
+
+  // Update GitHub integration data
+  user.githubIntegration = {
+    accessToken: hashedToken,
+    username: profile?.name || user.name,
+    connectedAt: new Date(),
+    avatarUrl: profile?.avatar_url,
+    profileUrl: profile?.html_url,
+    login: profile?.login,
+    userId: profile?.id?.toString(),
+    email: profile?.email
+  };
+
+  // Set preferred auth provider to GitHub if specified
+  if (profile?.preferGithub) {
+    user.preferredAuthProvider = 'github';
+    user.avatarUrl = profile?.avatar_url || user.avatarUrl;
+  }
+
+  // Update timestamp
+  user.lastUpdated = new Date();
+  await User.findByIdAndUpdate(user._id, user);
+  return user;
+}
+
+/**
+ * Create or update a user based on authentication
+ */
+export async function upsertUser(userData: {
+  provider: string;
+  email: string;
+  name: string;
+  id: string;
+  image?: string;
+  accessToken?: string;
+  profile?: any;
+}): Promise<IUser> {
+  await connectDB();
+  
+  const { provider, email, name, id, image, accessToken, profile } = userData;
+  const now = new Date();
+  
+  // Find user by email first (most reliable way to identify the same user)
+  let user = await User.findOne({ email });
+  
+  if (!user && provider === 'github') {
+    // Look for a user with this GitHub ID
+    user = await User.findOne({ 'githubIntegration.userId': id });
+  } else if (!user && provider === 'google') {
+    // Look for a user with this Google ID
+    user = await User.findOne({ googleId: id });
+  }
+  
+  if (user) {
+    // User exists - update with new information
+    console.log(`Updating existing user: ${user.email} with ${provider} auth`);
+
+    // Common updates
+    const updates: any = {
+      lastUpdated: now
+    };
+    
+    // Update basic info if provided
+    if (name) updates.name = name;
+    if (image) updates.avatarUrl = image;
+    
+    if (provider === 'google') {
+      // Update Google ID
+      updates.googleId = id;
+    } else if (provider === 'github' && accessToken) {
+      // Update or add GitHub integration
+      const hashedToken = hashToken(accessToken);
+      updates.githubIntegration = {
+        accessToken: hashedToken,
+        username: profile?.name || user.name,
+        connectedAt: now,
+        avatarUrl: profile?.avatar_url,
+        profileUrl: profile?.html_url,
+        login: profile?.login,
+        userId: id,
+        email: profile?.email
+      };
+      
+      // If GitHub email differs from primary email, add to additionalEmails
+      if (profile?.email && profile.email !== user.email) {
+        const additionalEmails = user.additionalEmails || [];
+        if (!additionalEmails.includes(profile.email)) {
+          updates.additionalEmails = [...additionalEmails, profile.email];
+        }
+      }
+    }
+    
+    // Apply updates
+    await User.updateOne({ _id: user._id }, { $set: updates });
+    
+    // Refresh user data
+    user = await User.findOne({ _id: user._id }) as IUser;
+  } else {
+    // Create new user
+    const newUser: any = {
+      email,
+      name,
+      createdAt: now,
+      lastUpdated: now,
+      avatarUrl: image,
+      preferredAuthProvider: provider,
+      additionalEmails: []
+    };
+    
+    if (provider === 'google') {
+      newUser.googleId = id;
+      newUser.userId = id;
+    } else if (provider === 'github') {
+      // For GitHub-first users, create a placeholder Google ID
+      newUser.googleId = `github_${id}`;
+      newUser.userId = id;
+      
+      if (accessToken) {
+        const hashedToken = hashToken(accessToken);
+        newUser.githubIntegration = {
+          accessToken: hashedToken,
+          username: profile?.name || name,
+          connectedAt: now,
+          avatarUrl: profile?.avatar_url,
+          profileUrl: profile?.html_url,
+          login: profile?.login,
+          userId: id,
+          email: profile?.email
+        };
+      }
+    }
+    
+    // Apply updates
+    await User.updateOne({ _id: newUser._id }, { $set: newUser });
+    
+    // Refresh user data
+    const updatedUser = await User.findOne({ _id: newUser._id });
+    if (!updatedUser) {
+      throw new Error('Failed to retrieve updated user');
+    }
+    return updatedUser;
+  }
+}
+
+/**
+ * Get user's GitHub token for API calls
+ */
+export async function getGithubToken(userId: string): Promise<string | null> {
+  await connectDB();
+  
+  const user = await User.findOne({ 
+    userId, 
+    'githubIntegration.accessToken': { $exists: true } 
+  });
+  
+  if (!user || !user.githubIntegration?.accessToken) {
+    return null;
+  }
+  
+  return user.githubIntegration.accessToken;
+}
+
+/**
+ * Check if a user has GitHub connected
+ */
+export async function hasGithubConnected(userId: string): Promise<boolean> {
+  await connectDB();
+  
+  const user = await User.findOne({ userId });
+  return !!(user && user.githubIntegration?.accessToken);
+}
+
+/**
+ * Get GitHub repositories for a user
+ */
+export async function getGithubRepositories(userId: string): Promise<any[]> {
+  // This is a placeholder for now - will be implemented with GitHub API calls
+  return [];
+}
