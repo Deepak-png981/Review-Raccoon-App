@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { GitBranch, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { useSession } from 'next-auth/react';
+import ConnectRepositoryModal from './ConnectRepositoryModal';
+
 const DashboardContent: React.FC = () => {
   const { data: session } = useSession();
   const userName = session?.user?.name ? session.user.name.split(' ')[0] : 'Developer';
@@ -14,13 +16,10 @@ const DashboardContent: React.FC = () => {
           <h1 className="text-3xl font-bold tracking-tight">Welcome back, {userName}!</h1>
           <p className="text-muted-foreground mt-1">Here's what's happening with your repositories today.</p>
         </div>
-        <Button className="button-glow flex items-center gap-2">
-          <GitBranch size={16} />
-          Connect Repository
-        </Button>
+        <ConnectRepositoryModal />
       </div>
       
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Total Repositories</CardTitle>
