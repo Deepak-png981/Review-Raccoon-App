@@ -100,7 +100,7 @@ const AppSidebarContent: React.FC<AppSidebarContentProps> = ({
   return (
     <SidebarContent>
       <SidebarGroup>
-        <SidebarGroupLabel>Main</SidebarGroupLabel>
+        {/* <SidebarGroupLabel>Main</SidebarGroupLabel> */}
         <SidebarGroupContent>
           <SidebarMenu>
             {mainItems.map((item) => (

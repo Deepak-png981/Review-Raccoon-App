@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
         }
         
         const user = await User.create({ email, name, googleId, userId })
+        console.log("User created successfully in the DB:", user);
         return NextResponse.json({ 
             message: "User created successfully", 
             user 
