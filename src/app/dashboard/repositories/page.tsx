@@ -4,7 +4,6 @@ import { Suspense } from 'react';
 import RepositoriesContent from '@/components/dashboard/RepositoriesContent';
 import { Loader2 } from 'lucide-react';
 
-// A loading component that matches the design of the application
 const RepositoriesLoading = () => {
   return (
     <div className="flex flex-col items-center justify-center min-h-[50vh]">

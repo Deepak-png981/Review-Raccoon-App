@@ -159,7 +159,6 @@ export async function GET(req: NextRequest) {
       owner: repo.owner.login
     }));
 
-    // Calculate pagination metadata
     const totalPages = Math.ceil(totalRepos / validPerPage);
     const hasNextPage = validPage < totalPages;
     const hasPreviousPage = validPage > 1;

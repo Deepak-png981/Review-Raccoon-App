@@ -22,3 +22,15 @@ export interface PaginationData {
 export interface ConnectRepositoryModalProps {
   trigger?: React.ReactNode;
 }
+
+export interface GithubStatus {
+  isConnected: boolean;
+  username: string | null;
+  tokenValid: boolean;
+  tokenError?: string | null;
+  githubData?: {
+    username: string;
+    connectedAt: Date;
+    connected: boolean;
+  } | null;
+}
