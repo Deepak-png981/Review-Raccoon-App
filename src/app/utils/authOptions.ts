@@ -50,7 +50,7 @@ export const authOptions: NextAuthOptions = {
             return false;
           }
           
-          let existingUser = await User.findOne({ 
+          const existingUser = await User.findOne({ 
             $or: [
               { email: email },
               { googleId: googleId }

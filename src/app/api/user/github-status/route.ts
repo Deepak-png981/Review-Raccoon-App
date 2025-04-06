@@ -40,7 +40,16 @@ export async function GET(req: NextRequest) {
   }
 }
 
-const processUserForGitHubStatus = async (user: any) => {
+const processUserForGitHubStatus = async (user: {
+  _id: string | number | object;
+  githubAccount?: {
+    username?: string;
+    accessTokenHash?: string;
+    accessTokenIV?: string;
+    connected?: boolean;
+    connectedAt?: Date;
+  };
+}) => {
   const isGitHubConnected = !!user.githubAccount &&
     typeof user.githubAccount === 'object' &&
     !!user.githubAccount.username &&
@@ -60,8 +69,8 @@ const processUserForGitHubStatus = async (user: any) => {
 
   try {
     const accessToken = decryptToken(
-      user.githubAccount.accessTokenHash,
-      user.githubAccount.accessTokenIV
+      user.githubAccount!.accessTokenHash!,
+      user.githubAccount!.accessTokenIV!
     );
 
     const response = await fetch('https://api.github.com/user', {
@@ -79,7 +88,7 @@ const processUserForGitHubStatus = async (user: any) => {
       console.error('GitHub API error:', errorData);
     } else {
       // Make sure to update the connected flag if it's not already set
-      if (!user.githubAccount.connected) {
+      if (!user.githubAccount!.connected) {
         console.log("Updating connected flag to true");
         await User.findByIdAndUpdate(
           user._id,
@@ -99,9 +108,9 @@ const processUserForGitHubStatus = async (user: any) => {
     tokenValid: tokenValid,
     tokenError: tokenError,
     githubData: isGitHubConnected ? {
-      username: user.githubAccount.username,
-      connectedAt: user.githubAccount.connectedAt,
-      connected: user.githubAccount.connected,
+      username: user.githubAccount!.username,
+      connectedAt: user.githubAccount!.connectedAt,
+      connected: user.githubAccount!.connected,
     } : null
   });
 } 

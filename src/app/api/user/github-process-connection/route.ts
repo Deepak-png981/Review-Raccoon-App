@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
     if (emailsResponse.ok) {
       const emails = await emailsResponse.json();
       
-      const primary = emails.find((email: any) => email.primary === true);
+      const primary = emails.find((email: { primary: boolean; email: string }) => email.primary === true);
       if (primary) {
         primaryEmail = primary.email;
       } else if (emails.length > 0) {
@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
     
     await connectDB();
     
-    let user = await User.findOne({ userId });
+    const user = await User.findOne({ userId });
 
     if (user) {
       try {

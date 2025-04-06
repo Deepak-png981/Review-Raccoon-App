@@ -34,7 +34,11 @@ const RepositoriesContent: React.FC = () => {
     username: string | null;
     tokenValid: boolean;
     tokenError?: string | null;
-    githubData?: any;
+    githubData?: {
+      username: string;
+      connectedAt: Date;
+      connected: boolean;
+    } | null;
   } | null>(null);
   
   const filteredRepositories = useMemo(() => {
@@ -51,11 +55,42 @@ const RepositoriesContent: React.FC = () => {
     checkGithubConnection();
   }, []);
   
+  const fetchRepositories = useCallback(async (page = 1) => {
+    setIsLoadingRepos(true);
+    setRepoError(null);
+    
+    try {
+      const response = await fetch(`/api/user/github-repositories?page=${page}&per_page=${pagination.perPage}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch repositories');
+      }
+      
+      const data = await response.json();
+      setRepositories(data.repositories);
+      setPagination(data.pagination);
+      
+      console.log('Fetched repositories:', data.repositories);
+      console.log('Pagination:', data.pagination);
+    } catch (error) {
+      console.error('Error fetching repositories:', error);
+      setRepoError(error instanceof Error ? error.message : 'Unknown error fetching repositories');
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch your GitHub repositories',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingRepos(false);
+    }
+  }, [pagination.perPage]);
+  
   useEffect(() => {
     if (githubStatus?.isConnected && githubStatus?.tokenValid) {
       fetchRepositories();
     }
-  }, [githubStatus]);
+  }, [githubStatus, fetchRepositories]);
   
   useEffect(() => {
     if (!searchParams) return;
@@ -232,37 +267,6 @@ const RepositoriesContent: React.FC = () => {
       setIsDisconnectingGithub(false);
     }
   };
-
-  const fetchRepositories = useCallback(async (page = 1) => {
-    setIsLoadingRepos(true);
-    setRepoError(null);
-    
-    try {
-      const response = await fetch(`/api/user/github-repositories?page=${page}&per_page=${pagination.perPage}`);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch repositories');
-      }
-      
-      const data = await response.json();
-      setRepositories(data.repositories);
-      setPagination(data.pagination);
-      
-      console.log('Fetched repositories:', data.repositories);
-      console.log('Pagination:', data.pagination);
-    } catch (error) {
-      console.error('Error fetching repositories:', error);
-      setRepoError(error instanceof Error ? error.message : 'Unknown error fetching repositories');
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch your GitHub repositories',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoadingRepos(false);
-    }
-  }, [pagination.perPage]);
 
   const handlePageChange = (newPage: number) => {
     if (newPage === pagination.currentPage) return;

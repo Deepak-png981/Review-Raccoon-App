@@ -131,8 +131,18 @@ export async function GET(req: NextRequest) {
       console.log(`Total repositories: ${totalRepos}`);
     }
 
-    // Format repositories for the client
-    const formattedRepos = repositories.map((repo: any) => ({
+    const formattedRepos = repositories.map((repo: {
+      id: number;
+      name: string;
+      description: string | null;
+      stargazers_count: number;
+      forks_count: number;
+      language: string | null;
+      updated_at: string;
+      html_url: string;
+      private: boolean;
+      owner: { login: string };
+    }) => ({
       id: repo.id,
       name: repo.name,
       description: repo.description || 'No description provided',
