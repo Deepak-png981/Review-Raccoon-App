@@ -14,25 +14,17 @@ import {
 import { Button } from '@/components/ui/button';
 import { GitBranch, AlertCircle } from 'lucide-react';
 import Image from 'next/image';
-import { useSession } from 'next-auth/react';
 import { toast } from '@/components/ui/use-toast';
-
-interface ConnectRepositoryModalProps {
-  trigger?: React.ReactNode;
-}
+import { ConnectRepositoryModalProps } from '@/types/Repository';
 
 export default function ConnectRepositoryModal({ trigger }: ConnectRepositoryModalProps) {
   const [open, setOpen] = React.useState(false);
   const [isConnecting, setIsConnecting] = React.useState(false);
-  const router = useRouter();
-  const { data: session } = useSession();
 
   const handleGitHubConnect = async () => {
     try {
       setIsConnecting(true);
       setOpen(false);
-      
-      // Use our custom GitHub connection API instead of NextAuth
       window.location.href = '/api/user/github-connect';
     } catch (error) {
       console.error('GitHub connection error:', error);

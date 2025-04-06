@@ -1,50 +1,15 @@
 import { User } from '@/models/User';
 import { connectDB } from '@/db/db';
-import crypto from 'crypto';
+import { decryptToken } from '@/app/utils/crypto';
 
-// Helper function to get consistent key for encryption
-function getDerivedEncryptionKey(secret: string): Buffer {
-  // Use SHA-256 to get a consistent 32-byte key from any secret
-  return crypto.createHash('sha256').update(secret).digest();
-}
-
-// Direct token decryption function
-function decryptToken(hash: string, iv: string) {
-  try {
-    if (!hash || !iv) {
-      console.error('Cannot decrypt without hash and IV');
-      throw new Error('Hash and IV are required for decryption');
-    }
-    
-    const secret = process.env.NEXTAUTH_SECRET || 'fallback_secret';
-    const key = getDerivedEncryptionKey(secret);
-    
-    console.log(`GitHub lib: Decryption with key length: ${key.length} bytes`);
-    
-    const ivBuffer = Buffer.from(iv, 'hex');
-    const decipher = crypto.createDecipheriv('aes-256-cbc', key, ivBuffer);
-    
-    let decrypted = decipher.update(hash, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    
-    return decrypted;
-  } catch (error) {
-    console.error('GitHub lib: Decryption error:', error);
-    throw error;
-  }
-}
-
-// Function to get a user's GitHub access token
-export async function getGitHubAccessToken(userId: string): Promise<string | null> {
+export const getGitHubAccessToken = async (userId: string): Promise<string | null> => {
   try {
     await connectDB();
-    
     const user = await User.findOne({ userId });
     if (!user || !user.githubAccount) {
       return null;
     }
     
-    // Use our direct decryption instead of the User model
     return decryptToken(
       user.githubAccount.accessTokenHash,
       user.githubAccount.accessTokenIV
@@ -55,11 +20,9 @@ export async function getGitHubAccessToken(userId: string): Promise<string | nul
   }
 }
 
-// Function to check if a user has connected their GitHub account
-export async function hasGitHubConnection(userId: string): Promise<boolean> {
+export const hasGitHubConnection = async (userId: string): Promise<boolean> => {
   try {
     await connectDB();
-    
     const user = await User.findOne({ userId });
     return !!user && !!user.githubAccount;
   } catch (error) {
@@ -68,8 +31,7 @@ export async function hasGitHubConnection(userId: string): Promise<boolean> {
   }
 }
 
-// Function to fetch user's repositories
-export async function fetchUserRepositories(accessToken: string) {
+export const fetchUserRepositories = async (accessToken: string) => {
   try {
     const response = await fetch('https://api.github.com/user/repos?sort=updated&per_page=10', {
       headers: {
@@ -89,7 +51,6 @@ export async function fetchUserRepositories(accessToken: string) {
   }
 }
 
-// Function to disconnect GitHub account
 export async function disconnectGitHub(userId: string): Promise<boolean> {
   try {
     await connectDB();

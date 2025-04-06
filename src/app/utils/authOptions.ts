@@ -3,7 +3,6 @@ import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
 import { User } from "@/models/User";
 import { connectDB } from "@/db/db";
-import crypto from "crypto";
 import { v4 as uuidv4 } from 'uuid';
 
 
@@ -25,11 +24,8 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user, account, profile, trigger }) {
-      console.log("JWT callback - trigger:", trigger);
-    
       if (user) {
         token.id = user.id;
-        console.log("JWT callback - user found:", user.id, user.email);
       }
 
       return token;
@@ -41,8 +37,6 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async signIn({ user, account, profile }) {
-      console.log("SignIn callback triggered for provider:", account?.provider);
-      
       try {
         await connectDB();
         
@@ -56,9 +50,6 @@ export const authOptions: NextAuthOptions = {
             return false;
           }
           
-          console.log("Looking for existing user with email:", email);
-          
-          // Check if user already exists
           let existingUser = await User.findOne({ 
             $or: [
               { email: email },
@@ -67,20 +58,14 @@ export const authOptions: NextAuthOptions = {
           });
           
           if (existingUser) {
-            console.log("User found in database:", existingUser.userId);
             user.id = existingUser.userId;
-            
-            // Update user data if necessary
             if (existingUser.name !== name || existingUser.googleId !== googleId) {
               existingUser.name = name;
               existingUser.googleId = googleId;
               await existingUser.save();
-              console.log("Updated existing user data");
             }
           } else {
-            // Create new user
             const userId = uuidv4();
-            console.log("Creating new user with userId:", userId);
             
             const newUser = await User.create({
               email,
@@ -90,7 +75,6 @@ export const authOptions: NextAuthOptions = {
               createdAt: new Date()
             });
             
-            console.log("New user created:", newUser.userId);
             user.id = newUser.userId;
           }
         }
