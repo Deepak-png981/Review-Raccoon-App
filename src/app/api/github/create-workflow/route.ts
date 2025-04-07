@@ -5,14 +5,9 @@ import { User } from '@/models/User';
 import { connectDB } from '@/db/db';
 import { decryptToken } from '@/app/utils/crypto';
 import { REVIEW_RACCOON_WORKFLOW_CONTENT } from '@/constants';
-import simpleGit, { SimpleGit } from 'simple-git';
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
+import { Octokit } from '@octokit/rest';
 
 export async function POST(req: NextRequest) {
-  const tempDir = path.join(os.tmpdir(), `rr-workflow-${Date.now()}`);
-  
   try {
     const session = await getServerSession(authOptions);
     
@@ -53,56 +48,74 @@ export async function POST(req: NextRequest) {
       user.githubAccount.accessTokenIV
     );
 
+    const octokit = new Octokit({
+      auth: accessToken
+    });
+
     const workflowContent = REVIEW_RACCOON_WORKFLOW_CONTENT(userId);
 
-    const branchName = `review-raccoon-integration-${Date.now()}`;
-    
-    const repoResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: 'application/vnd.github.v3+json',
-      },
-    });
-    
-    if (!repoResponse.ok) {
-      const errorData = await repoResponse.json();
-      console.error('GitHub API error:', errorData);
-      return NextResponse.json({ error: 'Failed to fetch repository', details: errorData }, { status: repoResponse.status });
-    }
-    
-    const repoData = await repoResponse.json();
-    const defaultBranch = repoData.default_branch;
-    const repoUrl = `https://${accessToken}@github.com/${repoOwner}/${repoName}.git`;
-    
-    fs.mkdirSync(tempDir, { recursive: true });
-    const git: SimpleGit = simpleGit(tempDir);
-    
-    await git.clone(repoUrl, tempDir);
-    await git.checkout(['-b', branchName]);
-    const workflowsDir = path.join(tempDir, '.github', 'workflows');
-    fs.mkdirSync(workflowsDir, { recursive: true });
-    
-    const workflowPath = path.join(workflowsDir, 'review-raccoon.yml');
-    fs.writeFileSync(workflowPath, workflowContent);
-    
-    await git.addConfig('user.name', 'Review Raccoon');
-    await git.addConfig('user.email', 'noreply@review-raccoon.com');
-    await git.add('.github');
-    await git.commit('Add Review Raccoon workflow for automated code reviews');
-    await git.push('origin', branchName, ['--set-upstream']);
+    try {
+      const { data: repository } = await octokit.repos.get({
+        owner: repoOwner,
+        repo: repoName
+      });
+      
+      const defaultBranch = repository.default_branch;
 
-    const prResponse = await fetch(
-      `https://api.github.com/repos/${repoOwner}/${repoName}/pulls`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: 'Add Review Raccoon GitHub Action',
-          body: `This PR adds the Review Raccoon GitHub Action for automated code reviews on pull requests.
+      const { data: refData } = await octokit.git.getRef({
+        owner: repoOwner,
+        repo: repoName,
+        ref: `heads/${defaultBranch}`
+      });
+      
+      const latestCommitSha = refData.object.sha;
+      const branchName = `review-raccoon-integration-${Date.now()}`;
+      await octokit.git.createRef({
+        owner: repoOwner,
+        repo: repoName,
+        ref: `refs/heads/${branchName}`,
+        sha: latestCommitSha
+      });
+      
+      const workflowPath = '.github/workflows/review-raccoon.yml';
+      
+      const getFileSha = async () => {
+        try {
+          const { data: fileData } = await octokit.repos.getContent({
+            owner: repoOwner,
+            repo: repoName,
+            path: workflowPath,
+            ref: branchName
+          });
+          
+          if ('sha' in fileData) {
+            console.log(`File already exists with SHA: ${fileData.sha}`);
+            return fileData.sha;
+          }
+          return undefined;
+        } catch (error) {
+          console.log('File does not exist yet, will create new');
+          return undefined;
+        }
+      };
+      
+      const fileSha = await getFileSha();
+      
+      await octokit.repos.createOrUpdateFileContents({
+        owner: repoOwner,
+        repo: repoName,
+        path: workflowPath,
+        message: 'Add Review Raccoon workflow for automated code reviews',
+        content: Buffer.from(workflowContent).toString('base64'),
+        branch: branchName,
+        sha: fileSha
+      });
+      
+      const { data: pullRequest } = await octokit.pulls.create({
+        owner: repoOwner,
+        repo: repoName,
+        title: 'Add Review Raccoon GitHub Action',
+        body: `This PR adds the Review Raccoon GitHub Action for automated code reviews on pull requests.
 
 ## What is Review Raccoon?
 Review Raccoon is an AI-powered code review tool that automatically analyzes pull requests and provides feedback to improve code quality.
@@ -119,44 +132,34 @@ Please add the following secret to your repository settings:
 
 [Learn more about Review Raccoon](${process.env.NEXTAUTH_URL})
 `,
-          head: branchName,
-          base: defaultBranch,
-        }),
-      }
-    );
-    
-    if (!prResponse.ok) {
-      const errorData = await prResponse.json();
-      console.error('GitHub API error:', errorData);
-      return NextResponse.json({ error: 'Failed to create pull request', details: errorData }, { status: prResponse.status });
+        head: branchName,
+        base: defaultBranch
+      });
+      
+      console.log(`Created pull request #${pullRequest.number}`);
+      
+      return NextResponse.json({ 
+        success: true, 
+        pullRequest: {
+          number: pullRequest.number,
+          url: pullRequest.html_url
+        }
+      });
+      
+    } catch (githubError: any) {
+      console.error('GitHub API error:', githubError);
+      
+      const status = githubError.status || 500;
+      const message = githubError.message || 'Unknown GitHub API error';
+      
+      return NextResponse.json({ 
+        error: `GitHub API error: ${message}`,
+        details: githubError.response?.data || {}
+      }, { status });
     }
-    
-    const prData = await prResponse.json();
-    try {
-      console.log(`Cleaning up temporary directory: ${tempDir}`);
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    } catch (cleanupError) {
-      console.error('Error cleaning up temp directory:', cleanupError);
-    }
-    
-    return NextResponse.json({ 
-      success: true, 
-      pullRequest: {
-        number: prData.number,
-        url: prData.html_url
-      }
-    });
     
   } catch (error) {
     console.error('Error creating workflow PR:', error);
-    try {
-      if (fs.existsSync(tempDir)) {
-        fs.rmSync(tempDir, { recursive: true, force: true });
-      }
-    } catch (cleanupError) {
-      console.error('Error cleaning up temp directory after failure:', cleanupError);
-    }
-    
     return NextResponse.json({ 
       error: 'Failed to create workflow PR',
       details: error instanceof Error ? error.message : 'Unknown error'
