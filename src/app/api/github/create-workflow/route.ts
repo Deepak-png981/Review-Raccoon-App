@@ -146,16 +146,12 @@ Please add the following secret to your repository settings:
         }
       });
       
-    } catch (githubError: any) {
+    } catch (githubError) {
       console.error('GitHub API error:', githubError);
-      
-      const status = githubError.status || 500;
-      const message = githubError.message || 'Unknown GitHub API error';
-      
       return NextResponse.json({ 
-        error: `GitHub API error: ${message}`,
-        details: githubError.response?.data || {}
-      }, { status });
+        error: `GitHub API error: ${githubError}`,
+        details: JSON.stringify(githubError) || {}
+      }, { status: 500 });
     }
     
   } catch (error) {
