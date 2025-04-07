@@ -4,15 +4,49 @@ export const REVIEW_RACCOON_WORKFLOW_CONFIG = `name: Review Raccoon
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types:
+      - opened
+      - synchronize
+
+permissions: write-all
 
 jobs:
-  review:
+  code_review:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Review Raccoon Action
-        uses: review-raccoon/action@v1
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Review Raccoon
+        uses: Deepak-png981/AI-Code-Reviewer-Release@latest
         with:
-          github-token: \${{ secrets.GITHUB_TOKEN }}
-          config-path: '.reviewraccoon.json'`;  
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: \${{ secrets.OPENAI_API_KEY }}
+          OPENAI_API_MODEL: "gpt-4-1106-preview"
+          exclude: "yarn.lock,dist/**"
+          USER: "userId"`;
+
+export const REVIEW_RACCOON_WORKFLOW_CONTENT = (userId: string) => `name: Review Raccoon
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+
+permissions: write-all
+
+jobs:
+  code_review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Review Raccoon
+        uses: Deepak-png981/AI-Code-Reviewer-Release@latest
+        with:
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: \${{ secrets.OPENAI_API_KEY }}
+          OPENAI_API_MODEL: "gpt-4-1106-preview"
+          exclude: "yarn.lock,dist/**"
+          USER: "${userId}"
+`;  
