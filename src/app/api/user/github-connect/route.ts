@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     const githubAuthUrl = new URL('https://github.com/login/oauth/authorize');
     githubAuthUrl.searchParams.append('client_id', process.env.GITHUB_ID);
     githubAuthUrl.searchParams.append('redirect_uri', callbackUrl);
-    githubAuthUrl.searchParams.append('scope', 'read:user user:email repo');
+    githubAuthUrl.searchParams.append('scope', 'read:user user:email repo workflow');
     githubAuthUrl.searchParams.append('state', state);
     
     const userIdCookieValue = JSON.stringify({

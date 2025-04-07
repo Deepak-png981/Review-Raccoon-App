@@ -1,15 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { GitBranch, Star, GitFork, Clock, Code, ExternalLink, Eye } from 'lucide-react';
+import { GitBranch, Star, GitFork, Clock, Code, ExternalLink, Eye, Link } from 'lucide-react';
 import { Repository } from '@/types/Repository';
+import { useToast } from '@/components/ui/use-toast';
 
 interface RepositoryCardProps {
   repository: Repository;
 }
 
 export const RepositoryCard: React.FC<RepositoryCardProps> = ({ repository }) => {
-  // Function to generate a deterministic color based on repository name
+  const { toast } = useToast();
+  const [isConnecting, setIsConnecting] = useState(false);
+
   const getRepositoryColor = (name: string) => {
     const colors = [
       'from-blue-500 to-indigo-600',
@@ -33,6 +36,73 @@ export const RepositoryCard: React.FC<RepositoryCardProps> = ({ repository }) =>
 
   const repoColor = getRepositoryColor(repository.name);
   
+  const handleConnectRepository = async () => {
+    try {
+      setIsConnecting(true);
+      const response = await fetch('/api/github/create-workflow', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          repoName: repository.name,
+          repoOwner: repository.owner,
+        }),
+      });
+
+      const data = await response.json();
+      console.log("data", data);
+      if (response.ok && data.success) {
+        const newWindow = window.open(data.pullRequest.url, '_blank');
+        
+        if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+          toast({
+            title: 'Success!',
+            description: (
+              <div>
+                Pull request created for Review Raccoon integration.
+                <br />
+                <a 
+                  href={data.pullRequest.url} 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline text-primary hover:text-primary/80"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                >
+                  Click here to open the PR
+                </a>
+              </div>
+            ),
+            variant: 'default',
+          });
+        } else {
+          toast({
+            title: 'Success!',
+            description: `Pull request created for Review Raccoon integration. PR #${data.pullRequest.number}`,
+            variant: 'default',
+          });
+        }
+      } else {
+        toast({
+          title: 'Failed to create pull request',
+          description: data.error || 'Something went wrong',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error connecting repository:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to connect repository',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
   return (
     <Card className="group overflow-hidden border border-border/40 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 relative">
       {/* Top color bar */}
@@ -79,7 +149,18 @@ export const RepositoryCard: React.FC<RepositoryCardProps> = ({ repository }) =>
           </div>
         </div>
         
-        <div className="flex justify-end items-center mt-2 pt-3 border-t border-border/40">
+        <div className="flex justify-end items-center gap-2 mt-2 pt-3 border-t border-border/40">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-1 transition-all duration-300 hover:bg-blue-500 hover:text-white"
+            onClick={handleConnectRepository}
+            disabled={isConnecting}
+          >
+            <Link size={14} />
+            <span className="mr-1">{isConnecting ? 'Connecting...' : 'Connect'}</span>
+          </Button>
+          
           <a href={repository.url} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
             <Button variant="outline" size="sm" className="flex items-center gap-1 transition-all duration-300 hover:bg-primary hover:text-primary-foreground">
               <Eye size={14} />
