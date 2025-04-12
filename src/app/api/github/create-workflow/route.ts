@@ -6,6 +6,7 @@ import { connectDB } from '@/db/db';
 import { decryptToken } from '@/app/utils/crypto';
 import { REVIEW_RACCOON_WORKFLOW_CONTENT } from '@/constants';
 import { Octokit } from '@octokit/rest';
+import { RequestError } from '@octokit/request-error';
 
 export async function POST(req: NextRequest) {
   try {
@@ -167,16 +168,23 @@ Please add the following secret to your repository settings:
         }
       });
       
-    } catch (githubError: any) {
+    } catch (githubError: unknown) {
       console.error('GitHub API error:', githubError);
       
-      const status = githubError.status || 500;
-      const message = githubError.message || 'Unknown GitHub API error';
+      if (githubError instanceof RequestError) {
+        const status = githubError.status || 500;
+        const message = githubError.message || 'Unknown GitHub API error';
+        
+        return NextResponse.json({ 
+          error: `GitHub API error: ${message}`,
+          details: githubError.response?.data || {}
+        }, { status });
+      }
       
       return NextResponse.json({ 
-        error: `GitHub API error: ${message}`,
-        details: githubError.response?.data || {}
-      }, { status });
+        error: 'Unknown GitHub API error',
+        details: {}
+      }, { status: 500 });
     }
     
   } catch (error) {
