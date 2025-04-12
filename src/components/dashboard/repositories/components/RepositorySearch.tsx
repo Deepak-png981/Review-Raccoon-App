@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Search, RefreshCcw, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -38,7 +38,7 @@ export const RepositorySearch: React.FC<RepositorySearchProps> = ({
     }, 300);
   };
 
-  const handleOutsideClick = (e: MouseEvent) => {
+  const handleOutsideClick = useCallback((e: MouseEvent) => {
     if (
       containerRef.current && 
       !containerRef.current.contains(e.target as Node) && 
@@ -47,14 +47,14 @@ export const RepositorySearch: React.FC<RepositorySearchProps> = ({
     ) {
       setIsExpanded(false);
     }
-  };
+  }, [isExpanded, searchQuery]);
 
   useEffect(() => {
     document.addEventListener('mousedown', handleOutsideClick);
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
     };
-  }, [isExpanded, searchQuery]);
+  }, [handleOutsideClick]);
 
   if (isHeaderVariant) {
     return (

@@ -6,6 +6,7 @@ import { connectDB } from '@/db/db';
 import { decryptToken } from '@/app/utils/crypto';
 import { REVIEW_RACCOON_WORKFLOW_CONTENT } from '@/constants';
 import { Octokit } from '@octokit/rest';
+import { RequestError } from '@octokit/request-error';
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,11 +28,16 @@ export async function POST(req: NextRequest) {
 
     const userId = session.user.id;
     
-    let user = await User.findOne({ userId });
+    // Find user by userId first
+    const userByUserId = await User.findOne({ userId });
     
-    if (!user && session.user.email) {
-      user = await User.findOne({ email: session.user.email });
-    }
+    // If not found and email is available, try finding by email
+    const userByEmail = !userByUserId && session.user.email 
+      ? await User.findOne({ email: session.user.email })
+      : null;
+      
+    // Use the first valid user record found
+    const user = userByUserId || userByEmail;
     
     if (!user) {
       console.error("User not found");
@@ -55,13 +61,18 @@ export async function POST(req: NextRequest) {
     const workflowContent = REVIEW_RACCOON_WORKFLOW_CONTENT(userId);
 
     try {
+      console.log(`Starting workflow creation for ${repoOwner}/${repoName}`);
+      
+      // 1. Get repository details
       const { data: repository } = await octokit.repos.get({
         owner: repoOwner,
         repo: repoName
       });
       
       const defaultBranch = repository.default_branch;
+      console.log(`Default branch: ${defaultBranch}`);
 
+      // 2. Get the latest commit SHA
       const { data: refData } = await octokit.git.getRef({
         owner: repoOwner,
         repo: repoName,
@@ -69,6 +80,9 @@ export async function POST(req: NextRequest) {
       });
       
       const latestCommitSha = refData.object.sha;
+      console.log(`Latest commit SHA: ${latestCommitSha}`);
+      
+      // 3. Create a new branch
       const branchName = `review-raccoon-integration-${Date.now()}`;
       await octokit.git.createRef({
         owner: repoOwner,
@@ -77,40 +91,48 @@ export async function POST(req: NextRequest) {
         sha: latestCommitSha
       });
       
-      const workflowPath = '.github/workflows/review-raccoon.yml';
-      
-      const getFileSha = async () => {
-        try {
-          const { data: fileData } = await octokit.repos.getContent({
-            owner: repoOwner,
-            repo: repoName,
-            path: workflowPath,
-            ref: branchName
-          });
-          
-          if ('sha' in fileData) {
-            console.log(`File already exists with SHA: ${fileData.sha}`);
-            return fileData.sha;
-          }
-          return undefined;
-        } catch (error) {
-          console.log('File does not exist yet, will create new');
-          return undefined;
-        }
-      };
-      
-      const fileSha = await getFileSha();
-      
-      await octokit.repos.createOrUpdateFileContents({
+      console.log(`Created branch: ${branchName}`);
+
+      // 4. Get the tree of the latest commit
+      const { data: latestCommit } = await octokit.git.getCommit({
         owner: repoOwner,
         repo: repoName,
-        path: workflowPath,
-        message: 'Add Review Raccoon workflow for automated code reviews',
-        content: Buffer.from(workflowContent).toString('base64'),
-        branch: branchName,
-        sha: fileSha
+        commit_sha: latestCommitSha
       });
+
+      // 5. Create a tree with the new file
+      const { data: newTree } = await octokit.git.createTree({
+        owner: repoOwner,
+        repo: repoName,
+        base_tree: latestCommit.tree.sha,
+        tree: [{
+          path: '.github/workflows/review-raccoon.yml',
+          mode: '100644',
+          type: 'blob',
+          content: workflowContent
+        }]
+      });
+
+      // 6. Create a commit with the new tree
+      const { data: newCommit } = await octokit.git.createCommit({
+        owner: repoOwner,
+        repo: repoName,
+        message: 'Add Review Raccoon workflow for automated code reviews',
+        tree: newTree.sha,
+        parents: [latestCommitSha]
+      });
+
+      // 7. Update the reference to point to the new commit
+      await octokit.git.updateRef({
+        owner: repoOwner,
+        repo: repoName,
+        ref: `heads/${branchName}`,
+        sha: newCommit.sha
+      });
+
+      console.log(`Created workflow file and committed changes`);
       
+      // 8. Create a pull request
       const { data: pullRequest } = await octokit.pulls.create({
         owner: repoOwner,
         repo: repoName,
@@ -146,11 +168,22 @@ Please add the following secret to your repository settings:
         }
       });
       
-    } catch (githubError) {
+    } catch (githubError: unknown) {
       console.error('GitHub API error:', githubError);
+      
+      if (githubError instanceof RequestError) {
+        const status = githubError.status || 500;
+        const message = githubError.message || 'Unknown GitHub API error';
+        
+        return NextResponse.json({ 
+          error: `GitHub API error: ${message}`,
+          details: githubError.response?.data || {}
+        }, { status });
+      }
+      
       return NextResponse.json({ 
-        error: `GitHub API error: ${githubError}`,
-        details: JSON.stringify(githubError) || {}
+        error: 'Unknown GitHub API error',
+        details: {}
       }, { status: 500 });
     }
     
