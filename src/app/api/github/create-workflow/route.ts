@@ -93,46 +93,49 @@ export async function POST(req: NextRequest) {
       
       console.log(`Created branch: ${branchName}`);
 
-      // 4. Get the tree of the latest commit
-      const { data: latestCommit } = await octokit.git.getCommit({
-        owner: repoOwner,
-        repo: repoName,
-        commit_sha: latestCommitSha
-      });
-
-      // 5. Create a tree with the new file
-      const { data: newTree } = await octokit.git.createTree({
-        owner: repoOwner,
-        repo: repoName,
-        base_tree: latestCommit.tree.sha,
-        tree: [{
+      // 4. Create the workflow file directly using the content API
+      try {
+        await octokit.repos.createOrUpdateFileContents({
+          owner: repoOwner,
+          repo: repoName,
           path: '.github/workflows/review-raccoon.yml',
-          mode: '100644',
-          type: 'blob',
-          content: workflowContent
-        }]
-      });
+          message: 'Add Review Raccoon workflow for automated code reviews',
+          content: Buffer.from(workflowContent).toString('base64'),
+          branch: branchName
+        });
+        
+        console.log('Created workflow file successfully');
+      } catch (error) {
+        if (error instanceof RequestError && error.status === 404) {
+          console.log('Creating .github/workflows directory structure...');
+          
+          // Create the .github directory first
+          await octokit.repos.createOrUpdateFileContents({
+            owner: repoOwner,
+            repo: repoName,
+            path: '.github/.gitkeep',
+            message: 'Create .github directory',
+            content: '',
+            branch: branchName
+          });
+          
+          // Then create the workflows directory and the workflow file
+          await octokit.repos.createOrUpdateFileContents({
+            owner: repoOwner,
+            repo: repoName,
+            path: '.github/workflows/review-raccoon.yml',
+            message: 'Add Review Raccoon workflow for automated code reviews',
+            content: Buffer.from(workflowContent).toString('base64'),
+            branch: branchName
+          });
+          
+          console.log('Created directory structure and workflow file successfully');
+        } else {
+          throw error;
+        }
+      }
 
-      // 6. Create a commit with the new tree
-      const { data: newCommit } = await octokit.git.createCommit({
-        owner: repoOwner,
-        repo: repoName,
-        message: 'Add Review Raccoon workflow for automated code reviews',
-        tree: newTree.sha,
-        parents: [latestCommitSha]
-      });
-
-      // 7. Update the reference to point to the new commit
-      await octokit.git.updateRef({
-        owner: repoOwner,
-        repo: repoName,
-        ref: `heads/${branchName}`,
-        sha: newCommit.sha
-      });
-
-      console.log(`Created workflow file and committed changes`);
-      
-      // 8. Create a pull request
+      // 5. Create a pull request
       const { data: pullRequest } = await octokit.pulls.create({
         owner: repoOwner,
         repo: repoName,
