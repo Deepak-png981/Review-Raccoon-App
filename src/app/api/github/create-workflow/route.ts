@@ -95,6 +95,7 @@ export async function POST(req: NextRequest) {
 
       // 4. Create the workflow file directly using the content API
       try {
+        console.log(`Attempting to create workflow file at: .github/workflows/review-raccoon.yml on branch ${branchName}`);
         await octokit.repos.createOrUpdateFileContents({
           owner: repoOwner,
           repo: repoName,
@@ -104,33 +105,45 @@ export async function POST(req: NextRequest) {
           branch: branchName
         });
         
-        console.log('Created workflow file successfully');
+        console.log('Created workflow file successfully on first attempt.');
+
       } catch (error) {
         if (error instanceof RequestError && error.status === 404) {
-          console.log('Creating .github/workflows directory structure...');
+          console.log('Initial workflow file creation failed (404). Attempting to create directory structure...');
           
-          // Create the .github directory first
-          await octokit.repos.createOrUpdateFileContents({
-            owner: repoOwner,
-            repo: repoName,
-            path: '.github/.gitkeep',
-            message: 'Create .github directory',
-            content: '',
-            branch: branchName
-          });
-          
-          // Then create the workflows directory and the workflow file
-          await octokit.repos.createOrUpdateFileContents({
-            owner: repoOwner,
-            repo: repoName,
-            path: '.github/workflows/review-raccoon.yml',
-            message: 'Add Review Raccoon workflow for automated code reviews',
-            content: Buffer.from(workflowContent).toString('base64'),
-            branch: branchName
-          });
-          
-          console.log('Created directory structure and workflow file successfully');
+          try {
+            // Attempt to create the .github directory placeholder
+            console.log(`Attempting to create placeholder file at: .github/.gitkeep on branch ${branchName}`);
+            await octokit.repos.createOrUpdateFileContents({
+              owner: repoOwner,
+              repo: repoName,
+              path: '.github/.gitkeep',
+              message: 'Create .github directory',
+              content: '', // Empty content for placeholder
+              branch: branchName
+            });
+            console.log('Successfully created .github/.gitkeep placeholder.');
+
+            // Now, immediately retry creating the actual workflow file
+            console.log(`Retrying to create workflow file at: .github/workflows/review-raccoon.yml on branch ${branchName}`);
+            await octokit.repos.createOrUpdateFileContents({
+              owner: repoOwner,
+              repo: repoName,
+              path: '.github/workflows/review-raccoon.yml',
+              message: 'Add Review Raccoon workflow for automated code reviews',
+              content: Buffer.from(workflowContent).toString('base64'),
+              branch: branchName
+            });
+            console.log('Created workflow file successfully on second attempt after creating directory.');
+
+          } catch (nestedError) {
+            console.error('Error during directory structure creation or retry:', nestedError);
+            // Re-throw the original error or a new one indicating the failure
+            throw new Error(`Failed to create workflow file even after attempting directory creation. Error: ${nestedError instanceof Error ? nestedError.message : nestedError}`);
+          }
         } else {
+          // Re-throw other errors (non-404)
+          console.error('Non-404 error during initial workflow file creation:', error);
           throw error;
         }
       }
