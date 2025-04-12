@@ -93,8 +93,11 @@ export async function POST(req: NextRequest) {
       
       console.log(`Created branch: ${branchName}`);
 
-      // 4. Create the workflow file directly using the content API
+      // 4. Attempt to create the workflow file
+      let workflowFileCreationFailed = false;
+      let workflowCreationErrorDetails = null;
       try {
+        console.log(`Attempting to create workflow file at: .github/workflows/review-raccoon.yml on branch ${branchName}`);
         await octokit.repos.createOrUpdateFileContents({
           owner: repoOwner,
           repo: repoName,
@@ -104,43 +107,23 @@ export async function POST(req: NextRequest) {
           branch: branchName
         });
         
-        console.log('Created workflow file successfully');
+        console.log('Created workflow file successfully.');
+
       } catch (error) {
         if (error instanceof RequestError && error.status === 404) {
-          console.log('Creating .github/workflows directory structure...');
-          
-          // Create the .github directory first
-          await octokit.repos.createOrUpdateFileContents({
-            owner: repoOwner,
-            repo: repoName,
-            path: '.github/.gitkeep',
-            message: 'Create .github directory',
-            content: '',
-            branch: branchName
-          });
-          
-          // Then create the workflows directory and the workflow file
-          await octokit.repos.createOrUpdateFileContents({
-            owner: repoOwner,
-            repo: repoName,
-            path: '.github/workflows/review-raccoon.yml',
-            message: 'Add Review Raccoon workflow for automated code reviews',
-            content: Buffer.from(workflowContent).toString('base64'),
-            branch: branchName
-          });
-          
-          console.log('Created directory structure and workflow file successfully');
+          console.warn('Workflow file creation failed with 404. Proceeding without workflow file.');
+          workflowFileCreationFailed = true;
+          workflowCreationErrorDetails = error.message;
         } else {
+          // For other errors, re-throw to be caught by the outer catch block
+          console.error('Unexpected error during workflow file creation:', error);
           throw error;
         }
       }
 
-      // 5. Create a pull request
-      const { data: pullRequest } = await octokit.pulls.create({
-        owner: repoOwner,
-        repo: repoName,
-        title: 'Add Review Raccoon GitHub Action',
-        body: `This PR adds the Review Raccoon GitHub Action for automated code reviews on pull requests.
+      // 5. Create a pull request (adjust content if workflow creation failed)
+      let prTitle = 'Add Review Raccoon GitHub Action';
+      let prBody = `This PR adds the Review Raccoon GitHub Action for automated code reviews on pull requests.
 
 ## What is Review Raccoon?
 Review Raccoon is an AI-powered code review tool that automatically analyzes pull requests and provides feedback to improve code quality.
@@ -156,7 +139,39 @@ Please add the following secret to your repository settings:
 - \`OPENAI_API_KEY\`: Your OpenAI API key to power the AI code reviews
 
 [Learn more about Review Raccoon](${process.env.NEXTAUTH_URL})
-`,
+`;
+
+      if (workflowFileCreationFailed) {
+        prTitle = 'Setup Review Raccoon Integration Branch';
+        prBody = `This PR creates the integration branch for Review Raccoon.
+
+**Action Required:** The automated creation of the workflow file (\`.github/workflows/review-raccoon.yml\`) failed (Error: ${workflowCreationErrorDetails || 'Unknown 404'}). 
+
+Please manually create the following file in this branch:
+
+**Path:** \`.github/workflows/review-raccoon.yml\`
+
+**Content:**
+\`\`\`yaml
+${workflowContent}
+\`\`\`
+
+Once the file is added, Review Raccoon will be active on future pull requests.
+
+## Required Secrets
+Please ensure the following secret is added to your repository settings:
+- \`OPENAI_API_KEY\`: Your OpenAI API key to power the AI code reviews
+
+[Learn more about Review Raccoon](${process.env.NEXTAUTH_URL})
+`;
+      }
+
+      console.log(`Creating pull request with title: ${prTitle}`);
+      const { data: pullRequest } = await octokit.pulls.create({
+        owner: repoOwner,
+        repo: repoName,
+        title: prTitle,
+        body: prBody,
         head: branchName,
         base: defaultBranch
       });
@@ -168,7 +183,9 @@ Please add the following secret to your repository settings:
         pullRequest: {
           number: pullRequest.number,
           url: pullRequest.html_url
-        }
+        },
+        workflowCreated: !workflowFileCreationFailed,
+        message: workflowFileCreationFailed ? 'Branch created, but workflow file needs manual setup.' : 'Workflow and PR created successfully.'
       });
       
     } catch (githubError: unknown) {
